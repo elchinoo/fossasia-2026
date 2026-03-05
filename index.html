@@ -30,6 +30,17 @@
       letter-spacing: -0.02em;
     }
 
+    /* ── Keep headings from blowing up layouts ── */
+    .reveal .slides section h2 {
+      font-size: 1.35em;
+      margin: 0.1em 0 0.25em;
+      line-height: 1.2;
+    }
+    .reveal .slides section h3 {
+      font-size: 1.1em;
+      margin: 0.1em 0 0.2em;
+    }
+
     /* ── Title slide ── */
     .title-slide h1 {
       font-size: 1.9em;
@@ -60,9 +71,9 @@
     /* ── Accent boxes ── */
     .box {
       border-radius: 8px;
-      padding: 0.6em 1em;
-      margin: 0.4em 0;
-      font-size: 0.82em;
+      padding: 0.45em 0.8em;
+      margin: 0.3em 0;
+      font-size: 0.78em;
       text-align: left;
     }
     .box-pg  { background: rgba(51,103,145,0.25); border-left: 4px solid var(--pg-light); }
@@ -85,7 +96,8 @@
     .badge-os { background: #444; color: var(--accent); }
 
     /* ── Two-column layout ── */
-    .cols { display: grid; gap: 1.2em; }
+    .cols { display: grid; gap: 0.6em; min-width: 0; }
+    .cols > * { min-width: 0; overflow: hidden; }
     .cols-2  { grid-template-columns: 1fr 1fr; }
     .cols-3  { grid-template-columns: 1fr 1fr 1fr; }
     .cols-60-40 { grid-template-columns: 60fr 40fr; }
@@ -112,9 +124,9 @@
     .myth-card {
       background: rgba(255,255,255,0.05);
       border-radius: 10px;
-      padding: 0.7em 1em;
-      margin: 0.35em 0;
-      font-size: 0.8em;
+      padding: 0.45em 0.8em;
+      margin: 0.25em 0;
+      font-size: 0.76em;
       text-align: left;
     }
     .myth-card .myth-label {
@@ -153,21 +165,27 @@
 
     /* ── Code blocks ── */
     .reveal pre {
-      font-size: 0.72em;
+      font-size: 0.55em;
       border-radius: 8px;
       box-shadow: none;
-      margin: 0.5em 0;
+      margin: 0.35em 0;
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: pre;
     }
     .reveal code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
+    .reveal pre code { overflow-x: auto; max-width: 100%; }
 
     /* ── Dark panel card ── */
     .card {
       background: rgba(255,255,255,0.06);
       border-radius: 10px;
-      padding: 0.8em 1em;
-      font-size: 0.82em;
+      padding: 0.55em 0.8em;
+      font-size: 0.78em;
+      min-width: 0;
+      overflow: hidden;
     }
-    .card h4 { margin: 0 0 0.4em; font-size: 1em; }
+    .card h4 { margin: 0 0 0.3em; font-size: 1em; }
 
     /* ── Decision table ── */
     table.decision td, table.decision th {
@@ -1083,8 +1101,11 @@ SHOW ENGINE INNODB STATUS\G</code></pre>
     progress: true,
     center: true,
     width: 1100,
-    height: 680,
-    margin: 0.04,
+    height: 700,
+    margin: 0.05,
+    minScale: 0.1,
+    maxScale: 2.0,
+    disableLayout: false,
     plugins: [ RevealHighlight, RevealNotes, RevealZoom ]
   });
 </script>
