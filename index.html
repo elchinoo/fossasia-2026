@@ -232,6 +232,95 @@
       margin-top: 0.4em;
     }
 
+    /* ── About Me slide ── */
+    .about-globe {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4em;
+      margin-top: 0.4em;
+    }
+    .location-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 99px;
+      padding: 0.25em 0.7em;
+      font-size: 0.72em;
+      color: #ddd;
+    }
+    .stat-row {
+      display: flex;
+      gap: 0.6em;
+      margin-top: 0.5em;
+    }
+    .stat-box {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 0.5em 0.6em;
+      text-align: center;
+      border-top: 3px solid var(--accent);
+    }
+    .stat-box .stat-num {
+      font-size: 1.7em;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-box .stat-label {
+      font-size: 0.62em;
+      color: #aaa;
+      margin-top: 0.2em;
+    }
+    .edb-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 0.4em 0.8em;
+      margin-bottom: 0.5em;
+    }
+    .edb-badge img { height: 1.6em; vertical-align: middle; object-fit: contain; }
+    .edb-badge span { font-size: 0.75em; color: #ccc; }
+    .name-line {
+      font-size: 1.55em;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+      margin: 0.1em 0;
+    }
+    .role-line {
+      font-size: 0.78em;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 0.15em 0 0.5em;
+    }
+    .fun-fact {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5em;
+      margin: 0.3em 0;
+      font-size: 0.75em;
+      color: #ddd;
+    }
+    .fun-fact .icon {
+      font-size: 1.1em;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+    /* edb logo on title */
+    .edb-title-logo {
+      display: block;
+      margin: 0.8em auto 0;
+      height: 2em;
+      object-fit: contain;
+      opacity: 0.85;
+    }
+
     /* ── Footer ─ */
     .slide-footer {
       position: fixed;
@@ -273,6 +362,74 @@
   <div class="meta">
     <strong>Charly Batista</strong> &nbsp;·&nbsp; March 2026<br>
     <span style="color:var(--pg-light)">PostgreSQL</span> &nbsp;+&nbsp; <span style="color:var(--my-light)">MySQL</span> &nbsp;+&nbsp; <span style="color:var(--accent)">Linux Internals</span>
+  </div>
+  <img src="logos/edb_logo.png" class="edb-title-logo" alt="EDB" />
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 1b — ABOUT ME
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <div class="cols cols-60-40" style="align-items:center; height:100%">
+
+    <!-- LEFT: identity -->
+    <div>
+      <div class="edb-badge">
+        <img src="logos/edb_logo.png" alt="EDB" />
+        <span>Principal Product Solutions Engineer</span>
+      </div>
+      <p class="name-line">Charly Batista</p>
+      <p class="role-line">Making databases go brrr since the early 2000s 🐘</p>
+
+      <div class="fun-fact">
+        <span class="icon">🗓️</span>
+        <span>Over two decades in the trenches with open-source databases — enough to know where <em>all</em> the bodies are buried.</span>
+      </div>
+      <div class="fun-fact">
+        <span class="icon">🏛️</span>
+        <span>President, <strong style="color:var(--pg-light)">Brazilian PostgreSQL Association</strong> — because someone has to herd the elephants.</span>
+      </div>
+      <div class="fun-fact">
+        <span class="icon">✈️</span>
+        <span>Shipped production DBs on <strong>5 continents</strong>. The bugs look different everywhere; the <code>EXPLAIN</code> output is always ugly.</span>
+      </div>
+
+      <div class="about-globe" style="margin-top:0.6em">
+        <span class="location-pill">🇧🇷 Brazil</span>
+        <span class="location-pill">🇺🇸 USA</span>
+        <span class="location-pill">🇨🇳 China</span>
+        <span class="location-pill">🇪🇺 Europe</span>
+        <span class="location-pill">🇦🇺 Australia</span>
+        <span class="location-pill">+ more</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: stats + pg elephant -->
+    <div style="text-align:center">
+      <div style="font-size:5em; line-height:1; margin-bottom:0.15em">🐘</div>
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="stat-num">20+</div>
+          <div class="stat-label">years open-source</div>
+        </div>
+        <div class="stat-box" style="border-top-color:var(--pg-light)">
+          <div class="stat-num" style="color:var(--pg-light)">5</div>
+          <div class="stat-label">continents</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box" style="border-top-color:var(--my-light)">
+          <div class="stat-num" style="color:var(--my-light)">∞</div>
+          <div class="stat-label">slow queries fixed</div>
+        </div>
+        <div class="stat-box" style="border-top-color:#a78bfa">
+          <div class="stat-num" style="color:#a78bfa">1</div>
+          <div class="stat-label">PG president 🏆</div>
+        </div>
+      </div>
+      <p style="font-size:0.6em; color:#666; margin-top:0.5em">* ∞ may be a slight exaggeration</p>
+    </div>
+
   </div>
 </section>
 
