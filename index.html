@@ -19,6 +19,14 @@
       --warn: #f39c12;
       --ok: #2ecc71;
       --slide-bg: #0e1117;
+
+      /* Override Reveal.js night theme variables */
+      --r-main-font-size: 30px;
+      --r-heading1-size: 1.8em;
+      --r-heading2-size: 1.25em;
+      --r-heading3-size: 1.0em;
+      --r-heading-line-height: 1.2;
+      --r-heading-margin: 0 0 0.3em 0;
     }
 
     .reveal {
@@ -30,15 +38,22 @@
       letter-spacing: -0.02em;
     }
 
+    /* ── Constrain section content ── */
+    .reveal .slides section {
+      overflow: hidden;
+      padding: 8px 24px 12px !important;
+      box-sizing: border-box;
+    }
+
     /* ── Keep headings from blowing up layouts ── */
     .reveal .slides section h2 {
-      font-size: 1.35em;
-      margin: 0.1em 0 0.25em;
+      font-size: 1.25em !important;
+      margin: 0.05em 0 0.2em !important;
       line-height: 1.2;
     }
     .reveal .slides section h3 {
-      font-size: 1.1em;
-      margin: 0.1em 0 0.2em;
+      font-size: 1.0em !important;
+      margin: 0.05em 0 0.15em !important;
     }
 
     /* ── Title slide ── */
@@ -96,8 +111,8 @@
     .badge-os { background: #444; color: var(--accent); }
 
     /* ── Two-column layout ── */
-    .cols { display: grid; gap: 0.6em; min-width: 0; }
-    .cols > * { min-width: 0; overflow: hidden; }
+    .cols { display: grid; gap: 0.5em; min-width: 0; width: 100%; box-sizing: border-box; }
+    .cols > * { min-width: 0; overflow: hidden; box-sizing: border-box; }
     .cols-2  { grid-template-columns: 1fr 1fr; }
     .cols-3  { grid-template-columns: 1fr 1fr 1fr; }
     .cols-60-40 { grid-template-columns: 60fr 40fr; }
@@ -124,9 +139,9 @@
     .myth-card {
       background: rgba(255,255,255,0.05);
       border-radius: 10px;
-      padding: 0.45em 0.8em;
-      margin: 0.25em 0;
-      font-size: 0.76em;
+      padding: 0.35em 0.7em;
+      margin: 0.18em 0;
+      font-size: 0.73em;
       text-align: left;
     }
     .myth-card .myth-label {
@@ -156,25 +171,32 @@
 
     /* ── Section title ── */
     .section-title {
-      font-size: 0.72em;
+      font-size: 0.65em;
       text-transform: uppercase;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.12em;
       color: var(--accent);
-      margin-bottom: 0.2em !important;
+      margin: 0 0 0.1em 0 !important;
     }
 
     /* ── Code blocks ── */
     .reveal pre {
-      font-size: 0.55em;
+      font-size: 0.52em;
       border-radius: 8px;
       box-shadow: none;
-      margin: 0.35em 0;
+      margin: 0.3em 0;
+      width: 100%;
       max-width: 100%;
-      overflow-x: auto;
-      white-space: pre;
+      overflow: hidden;
+      box-sizing: border-box;
     }
     .reveal code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
-    .reveal pre code { overflow-x: auto; max-width: 100%; }
+    .reveal pre code {
+      max-width: 100%;
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-wrap: break-word;
+      display: block;
+    }
 
     /* ── Dark panel card ── */
     .card {
@@ -206,8 +228,8 @@
       background: linear-gradient(135deg, rgba(0,212,170,0.18), rgba(0,153,204,0.18));
       border: 2px solid var(--accent);
       border-radius: 12px;
-      padding: 0.8em 1.2em;
-      margin-top: 0.6em;
+      padding: 0.5em 0.9em;
+      margin-top: 0.4em;
     }
 
     /* ── Footer ─ */
@@ -229,11 +251,11 @@
       background: rgba(255,255,255,0.06);
       border-left: 4px solid var(--accent);
       border-radius: 0 8px 8px 0;
-      padding: 0.6em 1em;
+      padding: 0.45em 0.8em;
       font-style: italic;
-      font-size: 0.88em;
+      font-size: 0.82em;
       width: 90%;
-      margin: 0 auto;
+      margin: 0.3em auto;
     }
   </style>
 </head>
