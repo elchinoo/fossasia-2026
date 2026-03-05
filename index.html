@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Without Magic: How Open Source Databases Scale</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reset.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/theme/night.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <style>
+    :root {
+      --pg-color: #336791;
+      --pg-light: #5a9fd4;
+      --my-color: #e48e00;
+      --my-light: #f5a623;
+      --accent: #00d4aa;
+      --danger: #e74c3c;
+      --warn: #f39c12;
+      --ok: #2ecc71;
+      --slide-bg: #0e1117;
+    }
+
+    .reveal {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      text-transform: none;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── Title slide ── */
+    .title-slide h1 {
+      font-size: 1.9em;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+    .title-slide .subtitle {
+      color: var(--accent);
+      font-size: 1.05em;
+      margin-top: 0.3em;
+    }
+    .title-slide .meta {
+      margin-top: 1.8em;
+      font-size: 0.72em;
+      color: #aaa;
+    }
+    .event-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--accent), #0099cc);
+      color: #000;
+      font-weight: 700;
+      padding: 0.3em 0.9em;
+      border-radius: 99px;
+      font-size: 0.85em;
+      margin-bottom: 0.5em;
+    }
+
+    /* ── Accent boxes ── */
+    .box {
+      border-radius: 8px;
+      padding: 0.6em 1em;
+      margin: 0.4em 0;
+      font-size: 0.82em;
+      text-align: left;
+    }
+    .box-pg  { background: rgba(51,103,145,0.25); border-left: 4px solid var(--pg-light); }
+    .box-my  { background: rgba(228,142,0,0.2);   border-left: 4px solid var(--my-light); }
+    .box-os  { background: rgba(0,212,170,0.15);  border-left: 4px solid var(--accent); }
+    .box-warn{ background: rgba(231,76,60,0.15);  border-left: 4px solid var(--danger); }
+    .box-tip { background: rgba(46,204,113,0.15); border-left: 4px solid var(--ok); }
+
+    .badge {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 0.1em 0.5em;
+      font-size: 0.75em;
+      font-weight: 700;
+      vertical-align: middle;
+      margin-right: 0.3em;
+    }
+    .badge-pg { background: var(--pg-color); color: #fff; }
+    .badge-my { background: var(--my-color); color: #fff; }
+    .badge-os { background: #444; color: var(--accent); }
+
+    /* ── Two-column layout ── */
+    .cols { display: grid; gap: 1.2em; }
+    .cols-2  { grid-template-columns: 1fr 1fr; }
+    .cols-3  { grid-template-columns: 1fr 1fr 1fr; }
+    .cols-60-40 { grid-template-columns: 60fr 40fr; }
+
+    /* ── Pyramid / stack ── */
+    .pyramid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3em;
+      font-size: 0.78em;
+    }
+    .pyramid-layer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-weight: 600;
+      padding: 0.4em 0;
+      color: #fff;
+    }
+
+    /* ── Myth slide ── */
+    .myth-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 0.7em 1em;
+      margin: 0.35em 0;
+      font-size: 0.8em;
+      text-align: left;
+    }
+    .myth-card .myth-label {
+      color: var(--danger);
+      font-weight: 700;
+      font-size: 0.85em;
+      text-transform: uppercase;
+    }
+    .myth-card .truth-label {
+      color: var(--ok);
+      font-weight: 700;
+      font-size: 0.85em;
+      text-transform: uppercase;
+    }
+
+    /* ── Checklist ── */
+    .checklist li { list-style: none; padding: 0.15em 0; font-size: 0.82em; }
+    .checklist li::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+
+    /* ── Big number ── */
+    .bignum {
+      font-size: 2.6em;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 0.72em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      margin-bottom: 0.2em !important;
+    }
+
+    /* ── Code blocks ── */
+    .reveal pre {
+      font-size: 0.72em;
+      border-radius: 8px;
+      box-shadow: none;
+      margin: 0.5em 0;
+    }
+    .reveal code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
+
+    /* ── Dark panel card ── */
+    .card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 0.8em 1em;
+      font-size: 0.82em;
+    }
+    .card h4 { margin: 0 0 0.4em; font-size: 1em; }
+
+    /* ── Decision table ── */
+    table.decision td, table.decision th {
+      font-size: 0.72em;
+      padding: 0.35em 0.6em;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    table.decision th { background: rgba(0,212,170,0.2); }
+
+    /* ── Highlight text ── */
+    .hl  { color: var(--accent); font-weight: 700; }
+    .hly { color: var(--warn);   font-weight: 700; }
+    .hlr { color: var(--danger); font-weight: 700; }
+    .hlg { color: var(--ok);     font-weight: 700; }
+
+    /* ── Spoiler box ── */
+    .spoiler {
+      background: linear-gradient(135deg, rgba(0,212,170,0.18), rgba(0,153,204,0.18));
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 0.8em 1.2em;
+      margin-top: 0.6em;
+    }
+
+    /* ── Footer ─ */
+    .slide-footer {
+      position: fixed;
+      bottom: 0.6em;
+      left: 1.2em;
+      font-size: 0.45em;
+      color: rgba(255,255,255,0.3);
+      z-index: 9999;
+    }
+
+    /* ── Progress bar color ── */
+    .reveal .progress { background: rgba(0,212,170,0.2); }
+    .reveal .progress span { background: var(--accent); }
+
+    /* ── Blockquote ── */
+    .reveal blockquote {
+      background: rgba(255,255,255,0.06);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 0.6em 1em;
+      font-style: italic;
+      font-size: 0.88em;
+      width: 90%;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 1 — TITLE
+     ══════════════════════════════════════════════ -->
+<section class="title-slide" data-background-gradient="radial-gradient(ellipse at 20% 50%, #0a1628 0%, #0e1117 60%, #050a0f 100%)">
+  <div class="event-badge">FOSSASIA Summit 2026</div>
+  <h1>Performance Without Magic:<br><span style="color:var(--accent)">How Open Source Databases Scale</span></h1>
+  <p class="subtitle">No vendor promises. No marketing fluff.<br>Just the stuff that actually moves the needle.</p>
+  <div class="meta">
+    <strong>Charly Batista</strong> &nbsp;·&nbsp; March 2026<br>
+    <span style="color:var(--pg-light)">PostgreSQL</span> &nbsp;+&nbsp; <span style="color:var(--my-light)">MySQL</span> &nbsp;+&nbsp; <span style="color:var(--accent)">Linux Internals</span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 2 — THE HONEST OPENER
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">The Reality Check</p>
+  <h2>We've All Been Here</h2>
+  <blockquote>
+    "It was fast last week. I didn't change anything. Now it's crawling."
+  </blockquote>
+  <div style="margin-top:1em" class="cols cols-2">
+    <div class="card">
+      <h4>What we usually hear</h4>
+      <ul style="font-size:0.85em">
+        <li>"Just tune your queries"</li>
+        <li>"Add more RAM"</li>
+        <li>"Throw it in the cloud"</li>
+        <li>"Increase <code>max_connections</code>"</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>What we <span class="hl">actually</span> need</h4>
+      <ul style="font-size:0.85em">
+        <li>Understanding <em>why</em> it's slow</li>
+        <li>A mental model of the engine</li>
+        <li>Targeted, measurable changes</li>
+        <li>Knowing when to buy hardware</li>
+      </ul>
+    </div>
+  </div>
+  <p style="font-size:0.7em; margin-top:0.8em; color:#aaa">
+    This talk gives you that mental model.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 3 — AGENDA
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Agenda</p>
+  <h2>What We'll Cover</h2>
+  <div class="cols cols-2" style="margin-top:0.6em">
+    <div>
+      <ol style="font-size:0.8em; line-height:1.9">
+        <li>The Performance Stack</li>
+        <li>Indexing Done Right</li>
+        <li>Memory Management</li>
+        <li>I/O: The Real Bottleneck</li>
+        <li>OS / Kernel Tuning</li>
+      </ol>
+    </div>
+    <div>
+      <ol start="6" style="font-size:0.8em; line-height:1.9">
+        <li>Connection Management</li>
+        <li>Busting the Myths</li>
+        <li>Reading Query Plans</li>
+        <li>When to Buy Hardware</li>
+        <li>The Decision Framework</li>
+      </ol>
+    </div>
+  </div>
+  <div class="box box-tip" style="margin-top:1em">
+    Focus: <strong>PostgreSQL &amp; MySQL/InnoDB</strong> — principles apply across forks (Aurora, Percona, Citus, etc.)
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 4 — THE PERFORMANCE STACK
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Mental Model</p>
+  <h2>The Performance Stack</h2>
+  <div class="cols cols-60-40" style="align-items:center; margin-top:0.5em">
+    <div class="pyramid">
+      <div class="pyramid-layer" style="width:55%; background:#1a4060">Application &amp; ORM</div>
+      <div class="pyramid-layer" style="width:65%; background:#1e5070">SQL &amp; Query Design</div>
+      <div class="pyramid-layer" style="width:76%; background:var(--pg-color)">
+        <span class="badge badge-pg">PG</span> DB Engine Config
+        <span class="badge badge-my" style="margin-left:0.4em">MY</span>
+      </div>
+      <div class="pyramid-layer" style="width:88%; background:#3a5a30">OS / Kernel</div>
+      <div class="pyramid-layer" style="width:100%; background:#2a3a2a">File System &amp; Block Layer</div>
+      <div class="pyramid-layer" style="width:100%; background:#1a2a1a; border:2px solid var(--warn)">Hardware: CPU · RAM · Storage · Network</div>
+    </div>
+    <div style="font-size:0.75em">
+      <p><span class="hl">Every layer</span> can be a bottleneck.</p>
+      <p style="margin-top:0.6em">Tuning the wrong layer wastes time.<br/>Always measure first.</p>
+      <div class="box box-warn" style="margin-top:0.8em">
+        Fixing a query can give you <strong>10–1000×</strong> improvement.<br>
+        Buying a bigger server might give you <strong>2×</strong>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 5 — INDEXING FOUNDATION
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 1 — Query</p>
+  <h2>Indexing: The First Line of Defense</h2>
+  <div class="cols cols-2">
+    <div>
+      <p style="font-size:0.75em; margin-bottom:0.4em">Without index (Seq Scan)</p>
+      <pre><code class="language-sql">-- Reads EVERY row
+SELECT * FROM orders
+WHERE customer_id = 42;
+
+-- Cost: O(n)  →  table grows = pain</code></pre>
+      <p style="font-size:0.75em; margin-top:0.6em; margin-bottom:0.4em">With index</p>
+      <pre><code class="language-sql">CREATE INDEX idx_orders_customer
+  ON orders (customer_id);
+
+-- Cost: O(log n)  →  scales cleanly</code></pre>
+    </div>
+    <div style="font-size:0.78em">
+      <div class="box box-pg" style="margin-bottom:0.4em">
+        <span class="badge badge-pg">PG</span>
+        <strong>B-Tree</strong> (default), Hash, GIN (JSONB/arrays), BRIN (time-series), GiST (geo)
+      </div>
+      <div class="box box-my">
+        <span class="badge badge-my">MY</span>
+        <strong>B-Tree</strong> (default), Full-Text, Spatial (R-Tree)
+      </div>
+      <div class="box box-warn" style="margin-top:0.6em">
+        <strong>Indexes are not free.</strong><br>
+        Every write pays a cost. Don't index everything.
+      </div>
+      <div class="box box-tip" style="margin-top:0.4em">
+        <strong>Rule:</strong> index columns you <em>filter</em>, <em>join</em>, or <em>sort</em> on — not columns you select.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 6 — ADVANCED INDEXING
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 1 — Query</p>
+  <h2>Indexing Patterns That Actually Help</h2>
+  <div class="cols cols-2">
+    <div>
+      <p style="font-size:0.72em; margin-bottom:0.3em"><strong>Composite index order matters</strong></p>
+      <pre><code class="language-sql">-- Query filters status first, then date
+-- GOOD:
+CREATE INDEX ON events (status, created_at);
+
+-- BAD for this query:
+CREATE INDEX ON events (created_at, status);</code></pre>
+      <p style="font-size:0.72em; margin-top:0.6em; margin-bottom:0.3em"><span class="badge badge-pg">PG</span> <strong>Partial index</strong></p>
+      <pre><code class="language-sql">-- Index ONLY unprocessed rows
+CREATE INDEX ON jobs (created_at)
+  WHERE status = 'pending';</code></pre>
+    </div>
+    <div>
+      <p style="font-size:0.72em; margin-bottom:0.3em"><span class="badge badge-pg">PG</span> <strong>Covering index</strong> (Index-Only Scan)</p>
+      <pre><code class="language-sql">CREATE INDEX ON orders (customer_id)
+  INCLUDE (total, status);
+-- No heap access needed!</code></pre>
+      <p style="font-size:0.72em; margin-top:0.6em; margin-bottom:0.3em"><span class="badge badge-my">MY</span> <strong>Covering index</strong> (same idea)</p>
+      <pre><code class="language-sql">CREATE INDEX idx_cover
+  ON orders (customer_id, total, status);
+-- InnoDB: leaf stores all values</code></pre>
+      <div class="box box-tip" style="margin-top:0.4em; font-size:0.78em">
+        Covering indexes eliminate the most expensive operation: <strong>random I/O to the heap/clustered index</strong>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 7 — MEMORY MANAGEMENT
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 2 — Engine Config</p>
+  <h2>Memory: Your Most Impactful Lever</h2>
+  <div style="font-size:0.78em; margin-top:0.3em">
+    <p>The database exists to avoid going to disk. <span class="hl">Everything hot should live in RAM.</span></p>
+  </div>
+  <div class="cols cols-2" style="margin-top:0.5em">
+    <div>
+      <div class="box box-pg" style="margin-bottom:0.6em">
+        <h4 style="margin:0 0 0.4em"><span class="badge badge-pg">PG</span> Key memory settings</h4>
+        <code>shared_buffers</code> — shared page cache<br>
+        <code>effective_cache_size</code> — planner hint<br>
+        <code>work_mem</code> — per-sort / per-hash<br>
+        <code>maintenance_work_mem</code> — VACUUM, index builds<br>
+        <code>wal_buffers</code> — WAL write buffer
+      </div>
+    </div>
+    <div>
+      <div class="box box-my">
+        <h4 style="margin:0 0 0.4em"><span class="badge badge-my">MY</span> Key memory settings</h4>
+        <code>innodb_buffer_pool_size</code> — page cache + indexes<br>
+        <code>innodb_buffer_pool_instances</code> — reduce contention<br>
+        <code>innodb_log_buffer_size</code> — redo log buffer<br>
+        <code>tmp_table_size</code> / <code>max_heap_table_size</code><br>
+        <code>sort_buffer_size</code> — per-session
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 8 — BUFFER POOL MATH
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 2 — Engine Config</p>
+  <h2>The Buffer Pool / Shared Buffers Math</h2>
+  <div class="cols cols-2">
+    <div>
+      <div class="box box-pg" style="margin-bottom:0.5em">
+        <span class="badge badge-pg">PG</span> <strong>shared_buffers</strong><br><br>
+        <strong>Rule of thumb:</strong> 25% of RAM<br>
+        <em style="font-size:0.85em">(32 GB server → 8 GB)</em><br><br>
+        PG also uses the <strong>OS page cache</strong>.<br>
+        Set <code>effective_cache_size</code> = 50–75% RAM<br>
+        <em style="font-size:0.85em">(helps the planner choose index scans)</em>
+      </div>
+      <div class="box box-tip" style="font-size:0.8em">
+        Don't set <code>shared_buffers</code> &gt; 40% of RAM.<br>
+        You still need OS cache headroom.
+      </div>
+    </div>
+    <div>
+      <div class="box box-my" style="margin-bottom:0.5em">
+        <span class="badge badge-my">MY</span> <strong>innodb_buffer_pool_size</strong><br><br>
+        <strong>Rule of thumb:</strong> 70–80% of RAM<br>
+        <em style="font-size:0.85em">(InnoDB manages its own cache; less OS cache reliance)</em><br><br>
+        <code>innodb_buffer_pool_instances</code><br>
+        = 1 per GB, max 8–16<br>
+        <em style="font-size:0.85em">(reduces mutex contention under concurrency)</em>
+      </div>
+      <div class="box box-warn" style="font-size:0.8em">
+        Undersizing the buffer pool = 100% cache miss rate on working set = <strong>death by I/O</strong>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 9 — work_mem WARNING
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 2 — Engine Config</p>
+  <h2>The <code>work_mem</code> Trap</h2>
+  <div class="cols cols-60-40" style="align-items:start; margin-top:0.5em">
+    <div>
+      <pre><code class="language-sql">-- You see this in EXPLAIN ANALYZE:
+Sort  (cost=120345.00...)
+  Sort Method: external merge  Disk: 87456kB
+  --                           ^^^^ BAD
+
+-- Fix: raise work_mem for this session
+SET work_mem = '256MB';
+-- now Sort Method: quicksort  Memory: 25kB</code></pre>
+      <div class="box box-warn" style="margin-top:0.6em; font-size:0.8em">
+        <strong>Danger:</strong> <code>work_mem</code> is allocated <em>per sort / per hash node</em> per query, per connection.<br><br>
+        100 connections × 5 nodes × 256 MB = <span class="hlr">128 GB</span> 💀
+      </div>
+    </div>
+    <div style="font-size:0.8em">
+      <div class="box box-tip">
+        <strong>Safe pattern:</strong><br>
+        Keep global <code>work_mem</code> low (16–64 MB).<br>
+        Raise it per-session for known heavy queries.
+      </div>
+      <div class="box box-pg" style="margin-top:0.5em">
+        PG 13+ supports <code>hash_mem_multiplier</code> for fine-grained control of hash joins.
+      </div>
+      <div class="box box-my" style="margin-top:0.5em">
+        MySQL: <code>sort_buffer_size</code> is also per-session. Same trap applies.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 10 — I/O: THE REAL BOTTLENECK
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 3 — I/O</p>
+  <h2>I/O: Where Databases Go to Die</h2>
+  <div class="cols cols-3" style="margin-top:0.4em; font-size:0.8em; text-align:center">
+    <div class="card">
+      <div class="bignum">~100<span style="font-size:0.5em">μs</span></div>
+      <p>NVMe SSD<br><span style="color:#aaa; font-size:0.85em">random read latency</span></p>
+    </div>
+    <div class="card">
+      <div class="bignum" style="color:var(--warn)">~500<span style="font-size:0.5em">μs</span></div>
+      <p>SATA SSD<br><span style="color:#aaa; font-size:0.85em">random read latency</span></p>
+    </div>
+    <div class="card">
+      <div class="bignum" style="color:var(--danger)">~8<span style="font-size:0.5em">ms</span></div>
+      <p>Spinning HDD<br><span style="color:#aaa; font-size:0.85em">random read latency</span></p>
+    </div>
+  </div>
+  <div class="cols cols-2" style="margin-top:0.7em">
+    <div class="box box-pg" style="font-size:0.78em">
+      <span class="badge badge-pg">PG</span>
+      <strong>checkpoint_completion_target</strong> = 0.9<br>
+      <strong>max_wal_size</strong> — controls checkpoint pressure<br>
+      <strong>random_page_cost</strong> — NVMe: set to 1.1–1.5<br>
+      <code>synchronous_commit = off</code> for async writes
+    </div>
+    <div class="box box-my" style="font-size:0.78em">
+      <span class="badge badge-my">MY</span>
+      <strong>innodb_flush_log_at_trx_commit</strong> = 2 (safe-ish)<br>
+      <strong>innodb_io_capacity</strong> = match your device IOPS<br>
+      <strong>innodb_read_io_threads</strong> / <strong>write_io_threads</strong><br>
+      <code>innodb_flush_method = O_DIRECT</code> avoids double-buffering
+    </div>
+  </div>
+  <div class="box box-tip" style="margin-top:0.4em; font-size:0.78em">
+    <strong>Key insight:</strong> if your working set fits in RAM, I/O tuning barely matters. If it doesn't, nothing else will save you.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 11 — OS / KERNEL TUNING
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 4 — OS / Kernel</p>
+  <h2>Linux Kernel Settings That Matter</h2>
+  <div class="cols cols-2">
+    <div>
+      <p style="font-size:0.72em; margin-bottom:0.3em"><strong>Virtual Memory</strong></p>
+      <pre><code class="language-bash"># Don't swap under databases!
+vm.swappiness = 1          # (not 0, keep swapper alive)
+
+# Dirty page write-back
+vm.dirty_ratio = 15        # max dirty pages before blocking writes
+vm.dirty_background_ratio = 3   # background flush threshold
+
+# Huge pages (PostgreSQL)
+vm.nr_hugepages = &lt;size/2MB&gt;
+# saves TLB pressure on large shared_buffers</code></pre>
+    </div>
+    <div>
+      <p style="font-size:0.72em; margin-bottom:0.3em"><strong>Network &amp; File Descriptors</strong></p>
+      <pre><code class="language-bash"># Max open files
+fs.file-max = 2097152
+# For the DB process ulimit:
+# nofile = 65535
+
+# TCP tuning (high-concurrency)
+net.core.somaxconn = 65535
+net.ipv4.tcp_keepalive_time = 120
+net.ipv4.tcp_fin_timeout = 15
+
+# NUMA: pin buffer pool to NUMA node
+numactl --cpunodebind=0 --membind=0 \
+  mysqld</code></pre>
+      <div class="box box-warn" style="font-size:0.78em; margin-top:0.4em">
+        <strong>Disable Transparent Huge Pages (THP)</strong><br>
+        THP causes latency spikes in both PG &amp; MySQL.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 12 — TRANSPARENT HUGE PAGES + SCHEDULER
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 4 — OS / Kernel</p>
+  <h2>Two More OS Tunings You Can't Ignore</h2>
+  <div class="cols cols-2" style="margin-top:0.5em">
+    <div>
+      <p style="font-size:0.76em; margin-bottom:0.3em"><strong>Disable THP</strong></p>
+      <pre><code class="language-bash"># Check
+cat /sys/kernel/mm/transparent_hugepage/enabled
+# Disable (add to rc.local / systemd unit)
+echo never > \
+  /sys/kernel/mm/transparent_hugepage/enabled
+echo never > \
+  /sys/kernel/mm/transparent_hugepage/defrag</code></pre>
+      <div class="box box-warn" style="font-size:0.78em; margin-top:0.4em">
+        THP defrag can stall DB processes for <strong>hundreds of ms</strong> — invisible in query plans!
+      </div>
+    </div>
+    <div>
+      <p style="font-size:0.76em; margin-bottom:0.3em"><strong>I/O Scheduler</strong></p>
+      <pre><code class="language-bash"># Check current scheduler
+cat /sys/block/nvme0n1/queue/scheduler
+# [none] mq-deadline kyber bfq
+
+# NVMe/SSD: use 'none' or 'mq-deadline'
+echo mq-deadline > \
+  /sys/block/nvme0n1/queue/scheduler
+
+# HDD: bfq or mq-deadline</code></pre>
+      <div class="box box-tip" style="font-size:0.78em; margin-top:0.4em">
+        Setting the wrong scheduler on NVMe can halve your IOPS. <code>none</code> is often optimal on NVMe.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 13 — CONNECTION MANAGEMENT
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 2 — Engine Config</p>
+  <h2>Connections Are Not Free</h2>
+  <div class="cols cols-60-40" style="align-items:start; margin-top:0.4em">
+    <div>
+      <div class="box box-warn" style="font-size:0.82em; margin-bottom:0.5em">
+        <strong>Each idle PostgreSQL connection costs ~5–10 MB RAM.</strong><br>
+        500 connections = 2.5–5 GB just for idle backends.
+      </div>
+      <pre><code class="language-bash"># PostgreSQL: use a connection pooler
+# PgBouncer (transaction mode)
+[databases]
+mydb = host=127.0.0.1 port=5432 dbname=mydb
+
+[pgbouncer]
+pool_mode = transaction
+max_client_conn = 5000
+default_pool_size = 50     # actual PG connections</code></pre>
+      <div class="box box-my" style="font-size:0.78em; margin-top:0.4em">
+        <span class="badge badge-my">MY</span> MySQL threads are lighter, but <code>thread_cache_size</code> and <code>innodb_thread_concurrency</code> still matter at high concurrency.
+      </div>
+    </div>
+    <div style="font-size:0.8em">
+      <div class="box box-pg">
+        <strong>PG Poolers</strong><br>
+        PgBouncer → lightweight, battle-tested<br>
+        PgPool-II → pooler + HA + load balance<br>
+        Odyssey → multi-threaded
+      </div>
+      <div class="box box-tip" style="margin-top:0.5em">
+        <strong>Rule:</strong> Never set <code>max_connections</code> &gt; 200–300 in PostgreSQL without a pooler.
+      </div>
+      <div class="box box-os" style="margin-top:0.5em">
+        Connection storms are a real outage pattern. Poolers are infrastructure, not optional.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 14 — MYTHS
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Reality Check</p>
+  <h2>Busting the Performance Myths</h2>
+  <div style="margin-top:0.4em">
+    <div class="myth-card">
+      <span class="myth-label">Myth</span> "More RAM always fixes slow queries"<br>
+      <span class="truth-label">Truth</span> If your query lacks an index, no amount of RAM eliminates full-table scans.
+    </div>
+    <div class="myth-card">
+      <span class="myth-label">Myth</span> "Increasing <code>max_connections</code> handles more users"<br>
+      <span class="truth-label">Truth</span> More connections increase contention and memory pressure. Use a pooler.
+    </div>
+    <div class="myth-card">
+      <span class="myth-label">Myth</span> "SELECT * is fine — the DB fetches only what it uses"<br>
+      <span class="truth-label">Truth</span> <code>SELECT *</code> prevents covering index scans, inflates network/memory, and breaks query plans.
+    </div>
+    <div class="myth-card">
+      <span class="myth-label">Myth</span> "The cloud is faster"<br>
+      <span class="truth-label">Truth</span> Cloud storage (EBS gp2, standard) can have 5–10× worse I/O latency than local NVMe. Know your instance type.
+    </div>
+    <div class="myth-card">
+      <span class="myth-label">Myth</span> "VACUUM / ANALYZE runs automatically — I don't need to worry"<br>
+      <span class="truth-label">Truth</span> Autovacuum needs tuning too. Bloat and stale stats silently kill performance.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 15 — EXPLAIN / EXPLAIN ANALYZE
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Diagnose First</p>
+  <h2>Reading Query Plans: The Basics</h2>
+  <div class="cols cols-2">
+    <div>
+      <p style="font-size:0.72em; margin-bottom:0.3em"><span class="badge badge-pg">PG</span> <strong>EXPLAIN ANALYZE BUFFERS</strong></p>
+      <pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT * FROM orders
+WHERE customer_id = 42;
+
+-- Key things to look for:
+-- "Seq Scan"   → missing index?
+-- "Rows=10000 vs actual rows=3"
+--    → stale statistics, run ANALYZE
+-- "Buffers: shared hit=0 read=8000"
+--    → cache miss → I/O bound
+-- "Sort Method: external merge  Disk"
+--    → raise work_mem</code></pre>
+    </div>
+    <div>
+      <p style="font-size:0.72em; margin-bottom:0.3em"><span class="badge badge-my">MY</span> <strong>EXPLAIN FORMAT=JSON</strong></p>
+      <pre><code class="language-sql">EXPLAIN FORMAT=JSON
+SELECT * FROM orders
+WHERE customer_id = 42;
+
+-- Look for:
+-- "access_type": "ALL"  → Seq Scan
+-- "rows": 500000        → bad estimate
+-- "Using filesort"      → no useful index for ORDER BY
+-- "Using temporary"     → temp table → slow
+
+-- Enable slow query log!
+SET GLOBAL slow_query_log = ON;
+SET GLOBAL long_query_time = 0.1;</code></pre>
+      <div class="box box-tip" style="font-size:0.78em; margin-top:0.4em">
+        <strong>pg_stat_statements</strong> (PG) and <strong>performance_schema</strong> (MySQL) are your production profilers.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 16 — AUTOVACUUM / STATISTICS
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Maintenance Matters</p>
+  <h2>Statistics &amp; Bloat: The Silent Killers</h2>
+  <div class="cols cols-2">
+    <div>
+      <div class="box box-pg" style="margin-bottom:0.5em">
+        <span class="badge badge-pg">PG</span> <strong>Autovacuum tuning</strong>
+        <pre style="font-size:0.85em; margin-top:0.5em"><code class="language-sql">-- Per-table override for hot tables
+ALTER TABLE orders SET (
+  autovacuum_vacuum_scale_factor = 0.01,
+  autovacuum_analyze_scale_factor = 0.005,
+  autovacuum_vacuum_cost_delay = 2
+);</code></pre>
+        Bloated tables = more pages to scan = slower everything.
+      </div>
+    </div>
+    <div>
+      <div class="box box-my">
+        <span class="badge badge-my">MY</span> <strong>InnoDB statistics</strong>
+        <pre style="font-size:0.85em; margin-top:0.5em"><code class="language-sql">-- Persistent statistics (default in 5.6+)
+SET GLOBAL innodb_stats_persistent = ON;
+SET GLOBAL innodb_stats_auto_recalc = ON;
+
+-- Force refresh after bulk load
+ANALYZE TABLE orders;</code></pre>
+        Stale stats → wrong index choice → 100× slower plans.
+      </div>
+      <div class="box box-tip" style="margin-top:0.5em; font-size:0.78em">
+        After large batch imports, always run <code>ANALYZE</code> (PG) or <code>ANALYZE TABLE</code> (MySQL).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 17 — WHEN SOFTWARE HITS ITS LIMIT
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">The Inflection Point</p>
+  <h2>When Software Tuning Runs Out of Road</h2>
+  <div style="margin-top:0.4em; font-size:0.82em">
+    <p>You've done the work. Indexes are optimal. Config is tuned. And it's still slow. <span class="hl">Now what?</span></p>
+  </div>
+  <div class="cols cols-2" style="margin-top:0.5em">
+    <div>
+      <div class="box box-warn">
+        <strong>Signs you've hit a software ceiling</strong>
+        <ul style="margin-top:0.4em; font-size:0.88em">
+          <li>CPU iowait consistently &gt; 20%</li>
+          <li>Buffer pool hit rate &lt; 95%</li>
+          <li>Disk utilization at 100% (iostat)</li>
+          <li>No slow queries, but latency still high</li>
+          <li>Checkpoint storms or WAL lag</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="box box-tip">
+        <strong>Diagnostic commands</strong>
+        <pre style="font-size:0.85em; margin-top:0.4em"><code class="language-bash">iostat -x 1          # I/O saturation
+sar -u 1             # CPU iowait
+vmstat 1             # paging / blocking
+perf top             # CPU profiling
+# PG:
+SELECT * FROM pg_stat_bgwriter;
+SELECT * FROM pg_stat_user_tables
+  ORDER BY n_dead_tup DESC;
+# MySQL:
+SHOW ENGINE INNODB STATUS\G</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 18 — HARDWARE: WHAT MATTERS
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 5 — Hardware</p>
+  <h2>Hardware: What Actually Moves the Needle</h2>
+  <div class="spoiler" style="margin-bottom:0.8em">
+    <strong>The Spoiler:</strong> For most database workloads, the order is
+    <span class="hl">Storage &gt; RAM &gt; Network &gt; CPU</span>
+  </div>
+  <div class="cols cols-3" style="font-size:0.78em">
+    <div class="card" style="border-top: 3px solid var(--ok)">
+      <h4>Storage <span class="hlg">★★★★★</span></h4>
+      <p>Random I/O latency is the #1 bottleneck for OLTP. NVMe vs SATA SSD can be 5× difference. HDD is 80× worse.</p>
+      <p style="margin-top:0.4em"><strong>Upgrade when:</strong> iowait &gt; 20%, iostat shows 100% util</p>
+    </div>
+    <div class="card" style="border-top: 3px solid var(--warn)">
+      <h4>RAM <span class="hly">★★★★</span></h4>
+      <p>More RAM = larger buffer pool = fewer disk reads. If your working set doesn't fit, add RAM <em>before</em> anything else.</p>
+      <p style="margin-top:0.4em"><strong>Upgrade when:</strong> buffer hit rate &lt; 95%</p>
+    </div>
+    <div class="card" style="border-top: 3px solid #aaa">
+      <h4>CPU <span style="color:#aaa">★★★</span></h4>
+      <p>Databases are rarely CPU-bound in OLTP. More cores help with concurrency. Clock speed matters for complex queries.</p>
+      <p style="margin-top:0.4em"><strong>Upgrade when:</strong> CPU &gt; 80% with no iowait</p>
+    </div>
+  </div>
+  <div class="box box-os" style="margin-top:0.6em; font-size:0.78em">
+    <strong>Network:</strong> matters for replicas, bulk transfers, distributed queries. 10GbE is table stakes for production. 25GbE for high-throughput replication.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 19 — STORAGE DEEP DIVE
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Layer 5 — Hardware</p>
+  <h2>Storage: Making the Right Choice</h2>
+  <table class="decision" style="width:100%; font-size:0.72em; margin-top:0.5em">
+    <thead>
+      <tr>
+        <th>Storage Type</th>
+        <th>Random IOPS</th>
+        <th>Latency</th>
+        <th>Best For</th>
+        <th>Avoid For</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>NVMe U.2 / PCIe</strong></td>
+        <td><span class="hlg">500K–2M+</span></td>
+        <td><span class="hlg">&lt; 100μs</span></td>
+        <td>Hot OLTP, WAL, primary DB</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>SATA SSD</strong></td>
+        <td><span class="hlg">50K–100K</span></td>
+        <td><span class="hly">200–500μs</span></td>
+        <td>Read replicas, dev/staging</td>
+        <td>Write-heavy primaries</td>
+      </tr>
+      <tr>
+        <td><strong>HDD (7200 RPM)</strong></td>
+        <td><span class="hlr">100–200</span></td>
+        <td><span class="hlr">8–12ms</span></td>
+        <td>Cold backups, archives</td>
+        <td>Any live DB workload</td>
+      </tr>
+      <tr>
+        <td><strong>AWS EBS gp3</strong></td>
+        <td><span class="hly">3K–16K</span></td>
+        <td><span class="hly">1–2ms</span></td>
+        <td>General cloud OLTP</td>
+        <td>High-frequency micro-transactions</td>
+      </tr>
+      <tr>
+        <td><strong>AWS EBS io2 / local NVMe</strong></td>
+        <td><span class="hlg">Up to 256K</span></td>
+        <td><span class="hlg">&lt; 500μs</span></td>
+        <td>Production OLTP in cloud</td>
+        <td>Cost-sensitive workloads</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="box box-tip" style="margin-top:0.6em; font-size:0.78em">
+    RAID-10 on NVMe for write throughput + redundancy. Avoid RAID-5/6 for databases (write hole + parity overhead).
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 20 — DECISION FRAMEWORK
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">The Framework</p>
+  <h2>Software or Hardware? A Decision Tree</h2>
+  <div class="cols cols-2" style="margin-top:0.5em; font-size:0.8em">
+    <div>
+      <div class="card">
+        <h4 style="color:var(--ok)">Try software first if...</h4>
+        <ul class="checklist">
+          <li>Sequential scans on large tables (add index)</li>
+          <li>High CPU with low iowait (optimize query)</li>
+          <li>Cache miss rate &gt; 5% (tune buffer pool)</li>
+          <li>Stale statistics / visible bloat</li>
+          <li>Excessive connections (add pooler)</li>
+          <li>Checkpoint storms (tune WAL settings)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h4 style="color:var(--warn)">Invest in hardware when...</h4>
+        <ul style="list-style:none; padding:0; font-size:0.95em; line-height:1.8">
+          <li>⚡ Disk is 100% utilized, queries are optimal</li>
+          <li>⚡ RAM is maxed, buffer pool as large as possible</li>
+          <li>⚡ Working set fundamentally won't fit in RAM</li>
+          <li>⚡ Write throughput exceeds what NVMe can deliver</li>
+          <li>⚡ Replication lag despite optimal WAL tuning</li>
+        </ul>
+      </div>
+      <div class="box box-warn" style="margin-top:0.5em; font-size:0.82em">
+        Hardware scales linearly at best.<br>
+        A bad query can eat <em>orders of magnitude</em> more resources than a good one.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 21 — QUICK REFERENCE CHEATSHEET
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Take-Home Reference</p>
+  <h2>Key Parameters Cheat Sheet</h2>
+  <div class="cols cols-2" style="font-size:0.72em">
+    <div>
+      <div class="box box-pg">
+        <span class="badge badge-pg">PostgreSQL</span>
+        <table style="width:100%; margin-top:0.4em; border-collapse:collapse">
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">shared_buffers</td><td>25% RAM</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">effective_cache_size</td><td>50–75% RAM</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">work_mem</td><td>16–64 MB (global)</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">maintenance_work_mem</td><td>1–2 GB (autovacuum)</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">max_connections</td><td>&lt; 200–300 + pooler</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">checkpoint_completion_target</td><td>0.9</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">random_page_cost</td><td>1.1–1.5 (NVMe)</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--pg-light)">wal_compression</td><td>on (PG 15+: lz4)</td></tr>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="box box-my">
+        <span class="badge badge-my">MySQL / InnoDB</span>
+        <table style="width:100%; margin-top:0.4em; border-collapse:collapse">
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">innodb_buffer_pool_size</td><td>70–80% RAM</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">innodb_buffer_pool_instances</td><td>1 per GB, max 16</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">innodb_flush_method</td><td>O_DIRECT</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">innodb_flush_log_at_trx_commit</td><td>1 (safe) / 2 (fast)</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">innodb_io_capacity</td><td>match device IOPS</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">innodb_log_file_size</td><td>256 MB – 2 GB</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">max_connections</td><td>151 default → tune</td></tr>
+          <tr><td style="padding:0.2em 0.4em; color:var(--my-light)">slow_query_log</td><td>always ON in prod</td></tr>
+        </table>
+      </div>
+      <div class="box box-os" style="margin-top:0.4em">
+        <span class="badge badge-os">OS</span>
+        vm.swappiness=1 · disable THP · I/O scheduler · hugepages
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 22 — KEY TAKEAWAYS
+     ══════════════════════════════════════════════ -->
+<section data-background-color="#0e1117">
+  <p class="section-title">Summary</p>
+  <h2>Key Takeaways</h2>
+  <div class="cols cols-2" style="margin-top:0.5em">
+    <div>
+      <ol style="font-size:0.82em; line-height:2">
+        <li><strong>Measure before you tune.</strong> Use <code>EXPLAIN ANALYZE</code>, <code>pg_stat_statements</code>, slow query log.</li>
+        <li><strong>Fix the query first.</strong> A missing index can be 1000× faster than any config change.</li>
+        <li><strong>Right-size memory.</strong> Buffer pool hit rate should be ≥ 95%.</li>
+        <li><strong>Connections are threads / processes.</strong> Use a connection pooler.</li>
+        <li><strong>Storage is often the real bottleneck.</strong> NVMe for OLTP, always.</li>
+      </ol>
+    </div>
+    <div>
+      <ol start="6" style="font-size:0.82em; line-height:2">
+        <li><strong>OS tuning is not optional.</strong> THP, swappiness, I/O scheduler matter.</li>
+        <li><strong>Maintenance keeps performance.</strong> VACUUM, ANALYZE, statistics.</li>
+        <li><strong>Hardware buys headroom,<br>not fixes.</strong> Buy it when software is maxed out.</li>
+        <li><strong>The stack matters.</strong> Tune the right layer, in the right order.</li>
+      </ol>
+      <div class="spoiler" style="margin-top:0.6em; font-size:0.82em">
+        <strong>The biggest performance wins</strong> almost always come from removing unnecessary work — not from hardware or configuration.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SLIDE 23 — Q&A
+     ══════════════════════════════════════════════ -->
+<section data-background-gradient="radial-gradient(ellipse at 80% 50%, #0a1628 0%, #0e1117 60%, #050a0f 100%)">
+  <h2 style="font-size:2em; color:var(--accent)">Questions?</h2>
+  <p style="font-size:0.9em; color:#ccc; margin-top:0.2em">Performance Without Magic: How Open Source Databases Scale</p>
+
+  <div class="cols cols-2" style="margin-top:1.5em; font-size:0.8em; text-align:left">
+    <div class="card">
+      <h4 style="color:var(--accent)">Resources</h4>
+      <ul style="font-size:0.9em; line-height:1.8">
+        <li>PostgreSQL docs: <em>postgresql.org/docs</em></li>
+        <li>MySQL docs: <em>dev.mysql.com/doc</em></li>
+        <li>PGTune: <em>pgtune.leopard.in.ua</em></li>
+        <li>percona-toolkit: <em>percona.com/software</em></li>
+        <li><em>Use The Index, Luke</em>: use-the-index-luke.com</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--accent)">Connect</h4>
+      <p style="line-height:2">
+        Slides &amp; notes available at<br>
+        <span class="hl">github.com/charly.batista</span><br><br>
+        FOSSASIA Summit 2026<br>
+        <span style="color:#aaa">March 2026</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+</div><!-- /.slides -->
+</div><!-- /.reveal -->
+
+<!-- Footer -->
+<div class="slide-footer">Performance Without Magic · FOSSASIA Summit 2026 · Charly Batista</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/highlight/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/notes/notes.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/plugin/zoom/zoom.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'fade',
+    controls: true,
+    progress: true,
+    center: true,
+    width: 1100,
+    height: 680,
+    margin: 0.04,
+    plugins: [ RevealHighlight, RevealNotes, RevealZoom ]
+  });
+</script>
+</body>
+</html>
