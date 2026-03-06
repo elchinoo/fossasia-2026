@@ -1236,7 +1236,7 @@ SHOW ENGINE INNODB STATUS\G</code></pre>
   <h2 style="color:var(--accent); margin-bottom:0.1em">Questions?</h2>
   <p style="font-size:0.75em; color:#aaa; margin:0 0 0.5em">Performance Without Magic: How Open Source Databases Scale · FOSSASIA 2026</p>
 
-  <div class="cols" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; font-size:0.78em; align-items:start">
+  <div class="cols" style="grid-template-columns: 1.1fr 1.9fr; font-size:0.78em; align-items:start; gap:0.8em">
 
     <!-- Resources -->
     <div class="card" style="text-align:left">
@@ -1254,47 +1254,59 @@ SHOW ENGINE INNODB STATUS\G</code></pre>
       </div>
     </div>
 
-    <!-- LinkedIn QR -->
-    <div style="text-align:center">
-      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0.6em 0.5em">
-        <div style="background:#fff; border-radius:6px; padding:6px; display:inline-block; line-height:0">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Fwww.linkedin.com%2Fin%2Fcharlybatista%2F&margin=2"
-            width="120" height="120" alt="LinkedIn QR" style="display:block; border-radius:3px"
-          />
-        </div>
-        <p style="margin:0.4em 0 0.1em; font-weight:700; color:#0a66c2; font-size:0.9em">🔗 LinkedIn</p>
-        <p style="margin:0; color:#aaa; font-size:0.72em">linkedin.com/in/charlybatista</p>
-      </div>
-    </div>
+    <!-- Right: contacts row + EDB row -->
+    <div style="display:grid; grid-template-rows:auto auto; gap:0.6em">
 
-    <!-- GitHub QR -->
-    <div style="text-align:center">
-      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0.6em 0.5em">
-        <div style="background:#fff; border-radius:6px; padding:6px; display:inline-block; line-height:0">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Fgithub.com%2Felchinoo%2Ffossasia-2026&margin=2"
-            width="120" height="120" alt="GitHub QR" style="display:block; border-radius:3px"
-          />
-        </div>
-        <p style="margin:0.4em 0 0.1em; font-weight:700; color:var(--accent); font-size:0.9em">📦 Slides</p>
-        <p style="margin:0; color:#aaa; font-size:0.72em">github.com/elchinoo/fossasia-2026</p>
-      </div>
-    </div>
+      <!-- Row 1: LinkedIn + GitHub side by side -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6em">
 
-    <!-- EDB QR -->
-    <div style="text-align:center">
-      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0.6em 0.5em">
-        <div style="background:#fff; border-radius:6px; padding:6px; display:inline-block; line-height:0">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Fwww.enterprisedb.com%2F&margin=2"
-            width="120" height="120" alt="EDB QR" style="display:block; border-radius:3px"
-          />
+        <!-- LinkedIn QR -->
+        <div style="text-align:center">
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0.6em 0.5em">
+            <div style="background:#fff; border-radius:6px; padding:6px; display:inline-block; line-height:0">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Fwww.linkedin.com%2Fin%2Fcharlybatista%2F&margin=2"
+                width="120" height="120" alt="LinkedIn QR" style="display:block; border-radius:3px"
+              />
+            </div>
+            <p style="margin:0.4em 0 0.1em; font-weight:700; color:#0a66c2; font-size:0.9em">🔗 LinkedIn</p>
+            <p style="margin:0; color:#aaa; font-size:0.72em">linkedin.com/in/charlybatista</p>
+          </div>
         </div>
-        <p style="margin:0.4em 0 0.1em; font-weight:700; color:#f97316; font-size:0.9em">🐘 EDB</p>
-        <p style="margin:0; color:#aaa; font-size:0.72em">enterprisedb.com</p>
-      </div>
-    </div>
+
+        <!-- GitHub QR -->
+        <div style="text-align:center">
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0.6em 0.5em">
+            <div style="background:#fff; border-radius:6px; padding:6px; display:inline-block; line-height:0">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Fgithub.com%2Felchinoo%2Ffossasia-2026&margin=2"
+                width="120" height="120" alt="GitHub QR" style="display:block; border-radius:3px"
+              />
+            </div>
+            <p style="margin:0.4em 0 0.1em; font-weight:700; color:var(--accent); font-size:0.9em">📦 Slides</p>
+            <p style="margin:0; color:#aaa; font-size:0.72em">github.com/elchinoo/fossasia-2026</p>
+          </div>
+        </div>
+
+      </div><!-- /row 1 -->
+
+      <!-- Row 2: EDB centered -->
+      <div style="display:flex; justify-content:center">
+        <div style="text-align:center; width:50%">
+          <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0.6em 0.5em">
+            <div style="background:#fff; border-radius:6px; padding:6px; display:inline-block; line-height:0">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Fwww.enterprisedb.com%2F&margin=2"
+                width="120" height="120" alt="EDB QR" style="display:block; border-radius:3px"
+              />
+            </div>
+            <p style="margin:0.4em 0 0.1em; font-weight:700; color:#f97316; font-size:0.9em">🐘 EDB</p>
+            <p style="margin:0; color:#aaa; font-size:0.72em">enterprisedb.com</p>
+          </div>
+        </div>
+      </div><!-- /row 2 -->
+
+    </div><!-- /right -->
 
   </div>
 </section>
